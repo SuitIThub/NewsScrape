@@ -12,6 +12,9 @@ namespace NewsScrape
         static string time = "";
         static int value = 0;
 
+        /// <summary>
+        /// get a unique id
+        /// </summary>
         public static string id
         {
             get
@@ -27,6 +30,11 @@ namespace NewsScrape
             }
         }
 
+        /// <summary>
+        /// shortens long spaces to a single one
+        /// </summary>
+        /// <param name="text">string to be refined</param>
+        /// <returns>refined string</returns>
         public static string refineText(string text)
         {
             text = Regex.Replace(text, @"\s+", " ");
@@ -34,6 +42,11 @@ namespace NewsScrape
             return text;
         }
 
+        /// <summary>
+        /// converts the amount of bytes to the highest useful unit
+        /// </summary>
+        /// <param name="bytes">bytes to be converted</param>
+        /// <returns>a string displaying the converted bytes with their unit</returns>
         public static string ConvertBytesToReadableSize(double bytes)
         {
             string[] sizes = { "KB", "MB", "GB" };

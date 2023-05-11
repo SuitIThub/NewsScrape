@@ -17,13 +17,13 @@ namespace NewsScrape
     {
         public class DownloadFile
         {
-            public String id { get; }
+            public string id { get; }
             private StreamWriter file;
             public double size { get; private set; }
-            public String text { get; private set; }
+            public string text { get; private set; }
             private string path;
 
-            public DownloadFile(String id, String basePath)
+            public DownloadFile(string id, string basePath)
             {
                 this.id = id;
                 path = basePath + $"\\NewsScrape_TMP";
@@ -35,8 +35,15 @@ namespace NewsScrape
                 text = "";
             }
 
-            public double addText(String text)
+            /// <summary>
+            /// Adds Text to System. Refines the Text and saves the text into the corresponding File
+            /// </summary>
+            /// <param name="text">The text to be added</param>
+            /// <returns>the size of the file after appending in bytes</returns>
+            public double addText(string text)
             {
+                long old_length = file.BaseStream.Length;
+
                 text = Helper.refineText(text);
                 file.WriteLine(text);
                 this.text = text;
@@ -44,9 +51,13 @@ namespace NewsScrape
 
                 size = (double)length;
 
-                return size;
+                return (double)length - (double)old_length;
             }
 
+            /// <summary>
+            /// deletes the file and returns its content
+            /// </summary>
+            /// <returns>the text saved in the file before deleting it</returns>
             public string killFile()
             {
                 file.Close();
@@ -74,6 +85,9 @@ namespace NewsScrape
 
         private string fullText;
 
+        double bytesRecieved = 0.0;
+        DateTime timeStamp = DateTime.Now;
+
         public Form1()
         {
             InitializeComponent();
@@ -88,6 +102,9 @@ namespace NewsScrape
             //btnStop.Enabled = false;
         }
 
+        /// <summary>
+        /// Initializes the Program by loading all the Settings
+        /// </summary>
         private void initializeSettings()
         {
             appSettings = ConfigurationManager.AppSettings;
@@ -97,6 +114,9 @@ namespace NewsScrape
             maxDown.Value = int.Parse(appSettings["maxDown"]);
         }
 
+        /// <summary>
+        /// loads all webpage-links from file
+        /// </summary>
         private void initializeLinkField()
         {
             if (File.Exists(Directory.GetCurrentDirectory() + "\\online.ztg"))
@@ -111,7 +131,10 @@ namespace NewsScrape
             linkList.TextChanged += saveLinks;
         }
 
-        private void saveLinks(object sender, EventArgs e)
+        /// <summary>
+        /// saves the current link configuration to link file
+        /// </summary>
+        private void saveLinks(object _sender, EventArgs _e)
         {
             string text = linkList.Text.Replace("\r\n", "\n");
             File.WriteAllLines(Directory.GetCurrentDirectory() + "\\online.ztg", text.Split('\n'));
@@ -120,7 +143,7 @@ namespace NewsScrape
         /// <summary>
         /// Open Dialog-Box to select Folder
         /// </summary>
-        private void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object _sender, EventArgs _e)
         {
             using (var fbd = new FolderBrowserDialog())
             {
@@ -139,6 +162,9 @@ namespace NewsScrape
             }
         }
 
+        /// <summary>
+        /// is called if one Webpage is fully downloaded to start the next queued domain
+        /// </summary>
         public void startNextDownload()
         {
             if (nextDownload < pages.Length)
@@ -148,11 +174,14 @@ namespace NewsScrape
             }
         }
 
-        private void btnStart_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Starts the download-process
+        /// </summary>
+        private void btnStart_Click(object _sender, EventArgs _e)
         {
+            //disable GUI to prevent intervention by user
             btnStart.Enabled = false;
             btnStop.Enabled = true;
-
             linkList.Enabled = false;
             destinPath.Enabled = false;
             browseDest.Enabled = false;
@@ -160,12 +189,14 @@ namespace NewsScrape
             maxSize.Enabled = false;
             maxDown.Enabled = false;
 
+            //clears list panel for new download
             PanelList.Controls.Clear();
 
             setMessage("Downloading...");
 
             fullText = "";
 
+            //prepare links for use
             string links = linkList.Text.Replace("\r\n", "\n");
             string[] linkArr = links.Split('\n').Where(x => x != "").ToArray();
 
@@ -175,8 +206,10 @@ namespace NewsScrape
 
             for (int i = 0; i < linkArr.Length; i++)
             {
+                //create download-class for link
                 Webpage wp = new Webpage(linkArr[i], i, PanelList, this);
 
+                //create file-class for temporary storage and text management while downloading
                 DownloadFile file = new DownloadFile(wp.id, destinPath.Text);
                 files.Add(file.id, file);
 
@@ -189,10 +222,13 @@ namespace NewsScrape
             }
         }
 
-        double bytesRecieved = 0.0;
-        DateTime timeStamp = DateTime.Now;
-        
-
+        /// <summary>
+        /// add Text to system. Gets called by Download-Manager. Method reroutes the text to the corresponding file and
+        /// calculates the download rate with the returned byte sizes.
+        /// </summary>
+        /// <param name="key">the key used by the download- and file-manager to identify each other</param>
+        /// <param name="text">the text to be added</param>
+        /// <returns>the size of the added text</returns>
         public double addText(string key, string text)
         {
             double size = files[key].addText(text);
@@ -203,7 +239,6 @@ namespace NewsScrape
 
             if (timeDiff > 2)
             {
-                bytesRecieved /= 20;
                 bytesRecieved /= timeDiff;
 
                 updateDownSpeed(bytesRecieved);
@@ -216,13 +251,16 @@ namespace NewsScrape
             return size;
         }
 
+        /// <summary>
+        /// Updates TextView to display the estimated File Size of the final output file
+        /// </summary>
         public void updateFileSize()
         {
             double total = 0.0;
 
             files.Values.ToList().ForEach(file => total += file.size);
 
-            if (lFileSize.InvokeRequired)
+            if (lFileSize.InvokeRequired) //needed for call from non-main-thread
             {
                 lFileSize.Invoke(new Action(updateFileSize));
                 return;
@@ -233,9 +271,12 @@ namespace NewsScrape
             lFileSize.Text = $"File Size:\n{sizeText}";
         }
 
+        /// <summary>
+        /// Updates TextView to show the amount of links that have been queued for download
+        /// </summary>
         public void updateTotalLinks()
         {
-            if (lTotalLinks.InvokeRequired)
+            if (lTotalLinks.InvokeRequired) //needed for call from non-main-thread
             {
                 lTotalLinks.Invoke(new Action(updateTotalLinks));
                 return;
@@ -243,9 +284,12 @@ namespace NewsScrape
             lTotalLinks.Text = $"Total Links:\n{totalLinks}";
         }
 
+        /// <summary>
+        /// Updates TextView to show the amount of links that have been downloaded so far
+        /// </summary>
         public void updateTotalDownloaded()
         {
-            if (lTotalDown.InvokeRequired)
+            if (lTotalDown.InvokeRequired) //needed for call from non-main-thread
             {
                 lTotalDown.Invoke(new Action(updateTotalDownloaded));
                 return;
@@ -253,9 +297,13 @@ namespace NewsScrape
             lTotalDown.Text = $"Total Links Downloaded:\n{finishedLinks}";
         }
 
+        /// <summary>
+        /// Updates TextView to show the current download rate of the pages
+        /// </summary>
+        /// <param name="size">the amount of bytes downloaded in the last second</param>
         public void updateDownSpeed(double size)
         {
-            if (lDownSpeed.InvokeRequired)
+            if (lDownSpeed.InvokeRequired) //needed for call from non-main-thread
             {
                 lDownSpeed.Invoke(new Action<double>(updateDownSpeed), size);
                 return;
@@ -266,9 +314,13 @@ namespace NewsScrape
             lDownSpeed.Text = $"Download Speed:\n{speedText}/s";
         }
 
+        /// <summary>
+        /// Updates TextView to show system messages
+        /// </summary>
+        /// <param name="text">string to be displayed</param>
         public void setMessage(string text)
         {
-            if (lMessage.InvokeRequired)
+            if (lMessage.InvokeRequired) //needed for call from non-main-thread
             {
                 lMessage.Invoke(new Action<string>(setMessage), text);
                 return;
@@ -277,9 +329,13 @@ namespace NewsScrape
             lMessage.Text = text;
         }
 
+        /// <summary>
+        /// last call to finalize the download of a domain
+        /// </summary>
+        /// <param name="key">the identity-key to get the necessary data from the classes and to clean these up</param>
         public void finishFile(string key)
         {
-            if (btnStart.InvokeRequired)
+            if (btnStart.InvokeRequired) //needed for call from non-main-thread
             {
                 btnStart.Invoke(new Action<string>(finishFile), key);
                 return;
@@ -291,10 +347,12 @@ namespace NewsScrape
 
             updateTotalDownloaded();
 
+            //if last domain was finalized start finishing up download
             if (files.Count == 0)
             {
                 setMessage("Saving downloaded Text to output-file.");
 
+                //load encoding converter data
                 string[] codingText = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\encoding.cd", Encoding.UTF8);
                 Dictionary<string, string> codingVals = new Dictionary<string, string>();
                 foreach (string s in codingText)
@@ -304,9 +362,11 @@ namespace NewsScrape
                 }
                 codingVals.Keys.ToList().ForEach(rKey => fullText = fullText.Replace(rKey, codingVals[rKey]));
 
+                //convert text t o windows-1252 encoding
                 byte[] utf8Bytes = Encoding.UTF8.GetBytes(fullText);
                 byte[] w1252Bytes = Encoding.Convert(Encoding.UTF8, Encoding.GetEncoding("windows-1252"), utf8Bytes);
 
+                //write text to output file
                 File.WriteAllBytes(destinPath.Text + $"\\output.txt", w1252Bytes);
 
                 foreach (Webpage page in pages)
@@ -316,6 +376,7 @@ namespace NewsScrape
 
                 setMessage("Finished download.");
 
+                //reactivate GUI
                 btnStart.Enabled = true;
                 btnStop.Enabled = false;
                 
@@ -328,7 +389,10 @@ namespace NewsScrape
             }
         }
 
-        private void btnStop_Click(object sender, EventArgs e)
+        /// <summary>
+        /// used to stop all download processes
+        /// </summary>
+        private void btnStop_Click(object _sender, EventArgs _e)
         {
             setMessage("Waiting for remaining pages to finish the download.");
             foreach(Webpage page in pages)

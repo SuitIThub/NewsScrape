@@ -2,9 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,18 +10,21 @@ using System.Windows.Forms;
 
 namespace NewsScrape
 {
+    /// <summary>
+    /// This class defines a full domain. The class fully manages the download if it's own domain.
+    /// </summary>
     public class Webpage
     {
         public string id;
 
-        public List<(string, int)> urls;
+        private List<(string, int)> urls;
 
-        public Panel panel;
-        public Label title;
-        public ProgressBar progress;
-        public Button cancel;
-        public Label amount;
-        public Label size;
+        private Panel panel;
+        private Label title;
+        private ProgressBar progress;
+        private Button cancel;
+        private Label amount;
+        private Label size;
 
         private Panel parent;
 
@@ -33,7 +34,7 @@ namespace NewsScrape
 
         private Task downloadTask;
 
-        public CancellationTokenSource cts;
+        public CancellationTokenSource cts { get; private set; }
 
         public Webpage(string url, int order, Panel parent, Form1 context)
         {
@@ -44,17 +45,20 @@ namespace NewsScrape
             this.parent = parent;
             this.context = context;
 
-            urls = new List<(string, int)>();
-
-            urls.Add((url, 0));
+            urls = new List<(string, int)>
+            {
+                (url, 0)
+            };
 
             usedLinks = new List<string> { url };
 
+            //panel containing all components for frontend
             panel = new Panel();
             panel.Size = new Size(488, 22);
             panel.Location = new Point(0, 22 * order);
             panel.BorderStyle = BorderStyle.FixedSingle;
 
+            //TextView displaying domain in frontend
             title = new Label();
             title.Size = new Size(180, 22);
             title.Padding = new Padding(0, 3, 0, 3);
@@ -63,6 +67,7 @@ namespace NewsScrape
             title.AutoEllipsis = true;
             panel.Controls.Add(title);
 
+            //ProgressBar showing download-progress of currently downloading page
             progress = new ProgressBar();
             progress.Size = new Size(100, 15);
             progress.Location = new Point(180, 3);
@@ -71,6 +76,7 @@ namespace NewsScrape
             progress.Value = 0;
             panel.Controls.Add(progress);
 
+            //Button for cancelling the download of this domain
             cancel = new Button();
             cancel.Size = new Size(22, 20);
             cancel.Location = new Point(280, 0);
@@ -80,6 +86,7 @@ namespace NewsScrape
             cancel.Click += endDownload;
             panel.Controls.Add(cancel);
 
+            //TextView showing the amount of downloaded Pages and the amount of queued pages
             amount = new Label();
             amount.Size = new Size(100, 22);
             amount.Padding = new Padding(0, 3, 0, 3);
@@ -88,6 +95,7 @@ namespace NewsScrape
             amount.AutoEllipsis = true;
             panel.Controls.Add(amount);
 
+            //TextView showing the size of already downloaded text for this domain
             size = new Label();
             size.Size = new Size(85, 22);
             size.Padding = new Padding(0, 3, 0, 3);
@@ -101,12 +109,21 @@ namespace NewsScrape
             downloadTask = null;
         }
 
+        /// <summary>
+        /// run to start the downloading process for the pages defined in this class
+        /// </summary>
+        /// <returns>the Task of the created Multithreading-Task</returns>
         public Task startDownload()
         {
             downloadTask = Task.Run(() => downloadLink(cts.Token));
             return downloadTask;
         }
 
+        /// <summary>
+        /// Multithreaded method to download all webpages saved in <see cref="urls"/>
+        /// Scans downloaded pages for links to download next level of pages
+        /// </summary>
+        /// <param name="token">the <see cref="CancellationToken"/> used to kill the thread before regular end</param>
         private async void downloadLink(CancellationToken token)
         {
             int errorCount = 0;
@@ -122,29 +139,33 @@ namespace NewsScrape
                 {
                     using (WebClient client = new WebClient())
                     {
+                        //set Header for better access
                         client.Headers.Add("UserAgent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)");
                         client.Headers.Add("Cache-Control", "no-cache");
 
+                        //set listener for download progress
                         client.DownloadProgressChanged += WebClientDownloadProgressChanged;
-                        client.Encoding = Encoding.UTF8;
 
-                        //string result = client.DownloadString(url);
+                        //download in utf8
+                        client.Encoding = Encoding.UTF8;
 
                         string result = await client.DownloadStringTaskAsync(new Uri(url));
 
-                        //System.Diagnostics.Debug.WriteLine(result);
-
+                        //load downloaded text as html-document
                         HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
                         doc.LoadHtml(result);
 
-                        //get text from html without tags
+                        //get inner-text from html without tags
                         string text = doc.DocumentNode.InnerText;
+
+                        //load text into page-file
                         double size = context.addText(id, text);
                         updateSizeText(size);
 
                         context.finishedLinks++;
                         context.updateTotalDownloaded();
 
+                        //check for next level links if max level is not reached
                         if (level < context.maxDepth)
                         {
                             HtmlNodeCollection nodes = doc.DocumentNode.SelectNodes("//a[@href]");
@@ -185,9 +206,12 @@ namespace NewsScrape
             context.startNextDownload();
         }
 
+        /// <summary>
+        /// Listener for Download-Progress. Needed for Progress Bar
+        /// </summary>
         private void WebClientDownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
         {
-            if (progress.InvokeRequired)
+            if (progress.InvokeRequired) //needed for call from non-main-thread
             {
                 progress.Invoke(new Action<object, DownloadProgressChangedEventArgs>(WebClientDownloadProgressChanged), sender, e);
                 return;
@@ -195,9 +219,13 @@ namespace NewsScrape
             progress.Value = e.ProgressPercentage;
         }
 
+        /// <summary>
+        /// Updates TextView showing the amount of downloaded and queued pages
+        /// </summary>
+        /// <param name="text">Text to be displayed</param>
         private void updateAmountText(string text)
         {
-            if (amount.InvokeRequired)
+            if (amount.InvokeRequired) //needed for call from non-main-thread
             {
                 amount.Invoke(new Action<string>(updateAmountText), text);
                 return;
@@ -206,9 +234,13 @@ namespace NewsScrape
             amount.Text = text;
         }
 
+        /// <summary>
+        /// Updates TextView showing the size of the downloaded Text
+        /// </summary>
+        /// <param name="text">Text to be displayed</param>
         private void updateSizeText(double size)
         {
-            if (amount.InvokeRequired)
+            if (amount.InvokeRequired) //needed for call from non-main-thread
             {
                 amount.Invoke(new Action<double>(updateSizeText), size);
                 return;
@@ -219,7 +251,10 @@ namespace NewsScrape
             context.updateFileSize();
         }
 
-        public void endDownload(object sender, EventArgs e)
+        /// <summary>
+        /// kills the download thread
+        /// </summary>
+        public void endDownload(object _sender, EventArgs _e)
         {
             cts.Cancel();
         }
