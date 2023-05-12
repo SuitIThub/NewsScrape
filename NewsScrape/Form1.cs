@@ -353,14 +353,18 @@ namespace NewsScrape
                 setMessage("Saving downloaded Text to output-file.");
 
                 //load encoding converter data
-                string[] codingText = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\encoding.cd", Encoding.UTF8);
-                Dictionary<string, string> codingVals = new Dictionary<string, string>();
-                foreach (string s in codingText)
+
+                if (File.Exists(Directory.GetCurrentDirectory() + "\\encoding.cd"))
                 {
-                    string[] sSplit = s.Split(new string[] { "->" }, StringSplitOptions.None);
-                    codingVals.Add(sSplit[0], sSplit[1]);
+                    string[] codingText = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\encoding.cd", Encoding.UTF8);
+                    Dictionary<string, string> codingVals = new Dictionary<string, string>();
+                    foreach (string s in codingText)
+                    {
+                        string[] sSplit = s.Split(new string[] { "->" }, StringSplitOptions.None);
+                        codingVals.Add(sSplit[0], sSplit[1]);
+                    }
+                    codingVals.Keys.ToList().ForEach(rKey => fullText = fullText.Replace(rKey, codingVals[rKey]));
                 }
-                codingVals.Keys.ToList().ForEach(rKey => fullText = fullText.Replace(rKey, codingVals[rKey]));
 
                 //convert text t o windows-1252 encoding
                 byte[] utf8Bytes = Encoding.UTF8.GetBytes(fullText);
