@@ -195,7 +195,8 @@ namespace NewsScrape
                     if (errorCount > 5)
                     {
                         amount.Text = ex.Message;
-                        return;
+
+                        break;
                     }
                 }
             }
@@ -246,7 +247,7 @@ namespace NewsScrape
                 return;
             }
 
-            this.size.Text = Helper.ConvertBytesToReadableSize(size);
+            this.size.Text = Helper.ConvertBytesToReadableSize(size) + "/s";
 
             context.updateFileSize();
         }

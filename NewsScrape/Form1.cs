@@ -243,6 +243,8 @@ namespace NewsScrape
 
                 updateDownSpeed(bytesRecieved);
                 timeStamp = DateTime.Now;
+                size = bytesRecieved;
+
                 bytesRecieved = 0.0;
             }
 
@@ -352,6 +354,13 @@ namespace NewsScrape
             {
                 setMessage("Saving downloaded Text to output-file.");
 
+
+                //convert text t o windows-1252 encoding
+                byte[] utf8Bytes = Encoding.UTF8.GetBytes(fullText);
+                byte[] w1252Bytes = Encoding.Convert(Encoding.UTF8, Encoding.GetEncoding("windows-1252"), utf8Bytes);
+
+                string text1252 = Encoding.GetEncoding("windows-1252").GetString(w1252Bytes);
+
                 //load encoding converter data
 
                 if (File.Exists(Directory.GetCurrentDirectory() + "\\encoding.cd"))
@@ -363,12 +372,10 @@ namespace NewsScrape
                         string[] sSplit = s.Split(new string[] { "->" }, StringSplitOptions.None);
                         codingVals.Add(sSplit[0], sSplit[1]);
                     }
-                    codingVals.Keys.ToList().ForEach(rKey => fullText = fullText.Replace(rKey, codingVals[rKey]));
+                    codingVals.Keys.ToList().ForEach(rKey => text1252 = text1252.Replace(rKey, codingVals[rKey]));
                 }
 
-                //convert text t o windows-1252 encoding
-                byte[] utf8Bytes = Encoding.UTF8.GetBytes(fullText);
-                byte[] w1252Bytes = Encoding.Convert(Encoding.UTF8, Encoding.GetEncoding("windows-1252"), utf8Bytes);
+                w1252Bytes = Encoding.GetEncoding("windows-1252").GetBytes(text1252);
 
                 //write text to output file
                 File.WriteAllBytes(destinPath.Text + $"\\output.txt", w1252Bytes);
@@ -404,5 +411,6 @@ namespace NewsScrape
                 page.endDownload(null, null);
             }
         }
+
     }
 }
