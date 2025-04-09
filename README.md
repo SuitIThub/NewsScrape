@@ -92,9 +92,4 @@ The application interface provides the following features:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- HtmlAgilityPack for providing robust HTML parsing capabilities
-- Newtonsoft.Json for JSON handling utilities 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
