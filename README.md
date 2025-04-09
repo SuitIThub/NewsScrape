@@ -1,5 +1,11 @@
 # NewsScrape
 
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![.NET](https://img.shields.io/badge/.NET-4.7.2-blue)
+![UI](https://img.shields.io/badge/UI-Windows%20Forms-green)
+![License](https://img.shields.io/badge/license-MIT-brightgreen)
+
+
 A Windows Forms application for web scraping and content extraction from news websites. This tool allows you to download and process web content from multiple domains simultaneously, with configurable depth and progress tracking.
 
 ## Features
@@ -48,6 +54,19 @@ msbuild NewsScrape.sln
 ```
 
 ## Usage
+
+![NewsScrape Main Interface - URL Configuration and Download Settings](newsscrape-main-interface.png)
+
+The application interface provides the following features:
+
+- **Links**: Add URLs to scrape in the text area on the left
+- **Destination Folder**: Select where to save the scraped content
+- **Download Settings**:
+  - Download-Tiefe (Depth): Set how many levels deep to follow links (default: 2)
+  - Beende bei Dateigröße (MB): Set maximum file size limit in MB (default: 50)
+  - Anzahl Downloads: Set number of concurrent downloads (default: 4)
+- **Start/Stop**: Control the scraping process
+- **Progress Tracking**: Monitor download progress for each URL in the main panel
 
 1. Launch the application
 2. Enter the URL(s) you want to scrape
